@@ -3,7 +3,7 @@ from lots.models import Lot
 from haversine import haversine
 
 
-class LotsTestCase(APITestCase):
+class MapsTestCase(APITestCase):
 
     def setUp(self) -> None:
         self.lat = 37.5
@@ -72,3 +72,11 @@ class LotsTestCase(APITestCase):
         for res, lot in zip(response.data, sorted_lots):
             self.assertEqual(res['id'], lot.id)
             self.assertEqual(res['name'], lot.name)
+
+
+class LotsTestCase(APITestCase):
+
+    def setUp(self) -> None:
+        self.lat = 37.5
+        self.lng = 126.5
+
