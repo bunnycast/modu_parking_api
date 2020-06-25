@@ -7,7 +7,7 @@ class LotsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Lot
-        fields = ['name', 'address', 'phone_num', 'latitude', 'longitude', 'basic_rate', 'additional_rate',
+        fields = ['name', 'address', 'latitude', 'longitude', 'basic_rate', 'additional_rate',
                   'time_weekdays', 'time_weekends', 'section_count', ]
 
 
