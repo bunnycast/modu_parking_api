@@ -1,68 +1,58 @@
-from django.contrib.gis.geos import Point
-from django.contrib.gis.measure import D
-from django.shortcuts import render
-from rest_framework import viewsets, status
-from rest_framework.decorators import action, api_view
+from haversine import haversine
+from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from lots.models import Lot
-from lots.serializers import LotsSerializer, MapSerializer
-from users.models import User
+from lots.serializers import LotsSerializer, OrderSerializer, MapSerializer
 
 
 class LotsViewSet(viewsets.ModelViewSet):
     queryset = Lot.objects.all()
     serializer_class = LotsSerializer
-    # def get_serializer(self, *args, **kwargs):
-    #     if self.action == 'order_price':
-    #         return LotsSerializer
-    #     elif self.action == 'order_distance':
-    #         return
-    #     return super().get_serializer(*args, **kwargs)
+
+    def get_serializer(self, *args, **kwargs):
+        if self.action in ('distance_odr', 'price_odr'):
+            return OrderSerializer(*args, **kwargs)
+        elif self.action == 'map':
+            return MapSerializer(*args, **kwargs)
+        return super().get_serializer(*args, **kwargs)
 
     @action(detail=False)
-    def order(self, request, *args, **kwargs):
-        if request.data.pop('order') == 'price':
-            self.queryset = Lot.objects.filter().order_by('basic_rate')
-        elif request.data.pop('order') == 'distance':
-            distance = 2000
-            ref_location = Point(1.232433, 1.2323232)
-            res = Lot.objects.filter(
-                location__distance_lte=(
-                    ref_location,
-                    D(m=distance)
-                )
-            ).distance(
-                ref_location
-            ).order_by(
-                'distance'
-            )
-            self.queryset = Lot.objects.filter().order_by('distance')
+    def map(self, request, *args, **kwargs):
 
-        return super().list(request, *args, **kwargs)
+        result = []
+        for lot in self.queryset:
+            data = request.GET
+            if haversine((lot.latitude, lot.longitude), (float(data['latitude']), float(data['longitude']))) <= 2:
+                result.append(lot)
+
+        serializer = self.get_serializer(result, many=True)
+        return Response(serializer.data)
 
     @action(detail=False)
-    def order_distance(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
+    def price_odr(self, request, *args, **kwargs):
 
-    def list(self, request, *args, **kwargs):
-        pass
-
-    @api_view('GET')
-    def lots_detail(self, request, pk):
-        try:
-            lot = Lot.objects.get(pk=pk)
-            serializer = LotsSerializer(lot)
-            return Response(serializer.data)
-
-        except Lot.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-
-
-class MapViewSet(viewsets.ModelViewSet):
-    queryset = Lot.objects.all()
-    serializer_class = MapSerializer
+        serializer = self.get_serializer(self.queryset, many=True)
+        return Response(serializer.data)
 
     @action(detail=False)
-    def maps(self, request, *args, **kwargs):
-        return super().list(self, *args, **kwargs)
+    def distance_odr(self, request, *args, **kwargs):
+
+        user_location = (float(request.GET['latitude']), float(request.GET['longitude']))
+
+        serializer = self.get_serializer(self.queryset, many=True)
+
+        for lot in serializer.data:
+            lot.distance = get_distance(lot, user_location)
+
+        # sorting lots with distance
+        result = sorted(serializer.data, key=lambda obj: obj.distance)
+
+        return Response(result)
+
+
+def get_distance(lot, user_location):
+    lot_location = (lot.latitude, lot.longitude)
+    distance = haversine(lot_location, user_location)
+    return distance

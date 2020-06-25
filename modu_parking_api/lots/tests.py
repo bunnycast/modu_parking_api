@@ -1,66 +1,74 @@
-from django.contrib.auth import get_user_model
-from model_bakery import baker
-from rest_framework import status
-from rest_framework.authtoken.models import Token
-from rest_framework.test import APITestCase, CoreAPIClient
-
-# User = get_user_model()
+from rest_framework.test import APITestCase
 from lots.models import Lot
+from haversine import haversine
 
 
-class UserTestCase(APITestCase):
+class LotsTestCase(APITestCase):
+
     def setUp(self) -> None:
-        self.user = baker.make('users.User', password='1111', username='user')
-        self.data = {'username': self.user.username, 'password': '1111'}
+        self.lat = 37.5
+        self.lng = 126.5
+        self.zoom_lv = 2
 
-    def test_register(self):
-        """회원가입"""
-        data = {'username': 'user1', 'password': '1111'}
-        response = self.client.post('/api/users', data=data)
+        # create lots with different location
+        for i in range(50):
+            Lot.objects.create(latitude=self.lat, longitude=self.lng, name=f'{i}lot', )
+            self.lat += 0.05
+            self.lng += 0.01
 
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.user_data = {
+            'latitude': self.lat,
+            'longitude': self.lng,
+        }
 
-    def test_login(self):
-        """로그인"""
-        response = self.client.post('/api/users/login', data=self.data)
+    def test_map_list(self):
+        user_location = {
+            'latitude': self.lat,
+            'longitude': self.lng,
+            'zoom_lv': 2  # In order to retrieve lots within 2km
+        }
+        response = self.client.get('/api/lots/map', data=user_location)
+        self.assertEqual(response.status_code, 200)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsNotNone(response.data['token'])
+        user_location = (self.lat, self.lng)
+        for lot in response.data:
+            lat = lot['latitude']
+            lng = lot['longitude']
+            lot_location = (lat, lng)
 
-    def test_logout(self):
-        """로그아웃"""
-        token = baker.make(Token, user=self.user)
-        token = Token.objects.get(user_id=self.user.id)
-        self.client.force_authenticate(user=self.user, token=token.key)
-        response = self.client.get('/api/users/logout')
+            distance = haversine(lot_location, user_location)
+            self.assertLessEqual(distance, 2)  # distance between user and lot should be within 2km
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+    def test_distance_odr_list(self):
 
-    def test_deactivate(self):
-        """회원탈퇴"""
-        user = User.objects.get(pk=self.user.id)
-        self.client.force_authenticate(user=user)
-        response = self.client.delete(f'/api/users/{self.user.id}')
+        response = self.client.get('/api/lots/distance_odr', data=self.user_data)
+        self.assertEqual(response.status_code, 200)
 
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        # check if the response shows lots in distance order
+        user_location = (self.lat, self.lng)
+        for lot in response.data:
+            lat = lot['latitude']
+            lng = lot['longitude']
+            lot_location = (lat, lng)
 
-    def test_update(self):
-        """회원정보 수정"""
-        prev_data = User.objects.get(pk=self.user.id)
-        data = {'username': 'new_username', 'password': '1111'}
-        self.client.force_authenticate(user=self.user)
-        response = self.client.put(f'/api/users/{self.user.id}', data=data)
+            distance = haversine(lot_location, user_location)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['username'], data['username'])
-        self.assertNotEqual(response.data['username'], prev_data.username)
+            lot['distance'] = distance
 
-    def test_retrieve(self):
-        """회원 정보"""
-        self.client.force_authenticate(user=self.user)
-        response = self.client.get(f'/api/users/{self.user.id}')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # sorting lots with distance
+        sorted_lots = sorted(response.data, key=lambda x: x['distance'])
+        for res, lot in zip(response.data, sorted_lots):
+            self.assertEqual(res['id'], lot.id)
+            self.assertEqual(res['name'], lot.name)
+        # self.assertEqual(response.data, sorted_lots)
 
-    def test_list(self):
-        """회원 목록"""
-        pass
+    def test_price_odr_list(self):
+        response = self.client.get('/api/lots/price_odr', data=self.user_data)
+        self.assertEqual(response.status_code, 200)
+
+        # sorting lots with price
+        sorted_lots = sorted(response.data, key=lambda x: x['basic_rate'])
+
+        for res, lot in zip(response.data, sorted_lots):
+            self.assertEqual(res['id'], lot.id)
+            self.assertEqual(res['name'], lot.name)
