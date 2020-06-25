@@ -1,11 +1,12 @@
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
 from django.shortcuts import render
-from rest_framework import viewsets
-from rest_framework.decorators import action
+from rest_framework import viewsets, status
+from rest_framework.decorators import action, api_view
+from rest_framework.response import Response
 
 from lots.models import Lot
-from lots.serializers import LotsSerializer
+from lots.serializers import LotsSerializer, MapSerializer
 from users.models import User
 
 
@@ -47,5 +48,21 @@ class LotsViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         pass
 
+    @api_view('GET')
+    def lots_detail(self, request, pk):
+        try:
+            lot = Lot.objects.get(pk=pk)
+            serializer = LotsSerializer(lot)
+            return Response(serializer.data)
+
+        except Lot.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
 
+class MapViewSet(viewsets.ModelViewSet):
+    queryset = Lot.objects.all()
+    serializer_class = MapSerializer
+
+    @action(detail=False)
+    def maps(self, request, *args, **kwargs):
+        return super().list(self, *args, **kwargs)
