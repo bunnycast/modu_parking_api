@@ -17,15 +17,15 @@ class UserRegisterTestCase(APITestCase):
     def test_email_format(self):
         # wrong format
         wrong_email = 'wrong@format'
-        response = self.client.post(self.url, {"email": wrong_email, "password":password})
+        response = self.client.post(self.url, {"email": wrong_email, "password": password})
         self.assertEqual(400, response.status_code)
 
         # correct format
-        response = self.cloent.post(self.url, {"email": email, "password": password})
+        response = self.client.post(self.url, {"email": email, "password": password})
         self.assertEqual(response.data['email'], email)
         self.assertEqual(201, response.status_code)
 
-    def test_wothout_password(self):
+    def test_without_password(self):
         response = self.client.post(self.url, {"email": email, "password": ''})
         self.assertEqual(400, response.status_code)
 
