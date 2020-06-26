@@ -13,7 +13,7 @@ class ParkingTestCase(APITestCase):
         data = {
             'lot': '',
             'parking_time': 0.5,
-        }
+        }햣 
         response = self.client.put(f'/api/parkings/{self.parkings[0].pk}', data=data)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
