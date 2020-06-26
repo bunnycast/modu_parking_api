@@ -20,7 +20,7 @@ class LotsViewSet(viewsets.ModelViewSet):
     @action(detail=False)
     def map(self, request, *args, **kwargs):
         """
-        사용자의 위치를 기준으로 일정 범위의 주차장 목록 반환
+        사용자의 위치를 기준으로 일정 범위의 주차장 목록 반환_
         """
         result = []
         # data = request.GET  # request.GET : 사용자 위도, 경도, 줌레벨

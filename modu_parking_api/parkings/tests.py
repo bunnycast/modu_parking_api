@@ -26,7 +26,7 @@ class ParkingCreateTestCase(APITestCase):
 
         res = Munch(response.data)
         self.assertTrue(res.id)
-        self.assertEqual(res.parking_time, data['parking_time'])
+        self.assertEqual(res.parking_time, data['parkiCseteng_time'])
         self.assertEqual(res.user, self.user.id)
 
 
