@@ -122,16 +122,12 @@ class UserRetrieveUpdateTestCase(APITestCase):
         self.assertEqual(res.email, email)
 
     def test_user_update(self):
-<<<<<<< HEAD
-        data = {"email": "update@test.com", "password": "1111"}
-=======
         data = {
             "phoneNum": "010-1234-5678",
             "plateNum": "1243",
             "cardNum": "3072-1730-7021-1331",
             "username": "user22",
         }
->>>>>>> 9a895778637cd4de5b7ad96ad2538f56db8c3aec
         response = self.client.put(self.url, data=data)
         self.assertEqual(200, response.status_code)
 
