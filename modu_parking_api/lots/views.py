@@ -1,4 +1,3 @@
-import math
 from haversine import haversine
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -11,21 +10,21 @@ class LotsViewSet(viewsets.ModelViewSet):
     queryset = Lot.objects.all()
     serializer_class = LotsSerializer
 
-    def get_serializer(self, *args, **kwargs):
+    def get_serializer_class(self):
         if self.action in ('distance_odr', 'price_odr'):
-            return OrderSerializer(*args, **kwargs)
+            return OrderSerializer
         elif self.action == 'map':
-            return MapSerializer(*args, **kwargs)
-        return super().get_serializer(*args, **kwargs)
+            return MapSerializer
+        return super().get_serializer_class()
 
     @action(detail=False)
     def map(self, request, *args, **kwargs):
         """
         사용자의 위치를 기준으로 일정 범위의 주차장 목록 반환
         """
-
         result = []
-        data = request.GET  # request.GET : 사용자 위도, 경도, 줌레벨
+        # data = request.GET  # request.GET : 사용자 위도, 경도, 줌레벨
+        data = request.data  # request.GET : 사용자 위도, 경도, 줌레벨
 
         for lot in self.queryset:
             user_location = (float(data['latitude']), float(data['longitude']))
