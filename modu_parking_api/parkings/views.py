@@ -1,6 +1,8 @@
-from rest_framework import mixins
+from rest_framework import mixins, viewsets
 from rest_framework.authentication import TokenAuthentication
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from parkings import permissions
 from parkings.models import Parking
@@ -32,9 +34,17 @@ class ParkingViewSet(mixins.CreateModelMixin,
             permission_classes = [IsAuthenticated]
         return [permission() for permission in permission_classes]
 
+    def update(self, request, *args, **kwargs):
+        data = request.data
+        serializer = ParkingSerializer(self, data=data)
+        serializer.save()
+
+        return Response(serializer.data)
+
+
 
 """
-POST /parkings/	
+POST /parkings/
 : 주차 이벤트 생성(주인의 사용내역만)
 
 GET /parkings/
